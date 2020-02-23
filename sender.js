@@ -1,70 +1,46 @@
-const net = require('net');
+const fs = require('fs');
+const packet = require('./packet');
 const udp = require('dgram');
+const client = udp.createSocket('udp4');
 
 //retrieve cli params
-let raw_server_address = process.argv[2];
-let raw_n_port = process.argv[3];
-let raw_req_code = process.argv[4];
-let raw_message = process.argv[5];
+const emulator_address = process.argv[2];
+const emulator_port = process.argv[3];
+const sender_port = process.argv[4];
+const file_name = process.argv[5];
 
 //throw error if cli null or empty
-if (!raw_server_address || !raw_n_port || !raw_req_code || !raw_message) {
+if (!emulator_address || !emulator_port || !sender_port || !file_name) {
 	throw "Missing a required CLI param";
 }
 
-//parse cli param
-let server_address = (typeof(raw_server_address) === "string") && raw_server_address;
-let n_port = parseInt(raw_n_port);
-let req_code = parseInt(raw_req_code);
-let message = (typeof(raw_message) === "string") && raw_message;
 
-//throw error if cli param is in a wrong format
-if (!server_address || !n_port || !req_code || !message) {
-	throw "Invalid format for a CLI param";
-}
+const gbn = (file_name) => {
 
-//TCP negotiation function
-const negotiate = (server_address, n_port, req_code, callback) => {
-	const client = new net.Socket();
+	let window_size = 0;
 
-	//connect to TCP server
-	client.connect(n_port, server_address, function() {
-		console.log(`Connected to server:${server_address} at port:${n_port}`);
-	});
+	const read_file = (file_name) => {
 
-	//event handler for when client receives message
-	client.on('data', function(data) {
-		console.log(`Received:${data}`);
+	};
 
-		//parse data to Integer as port
-		let r_port = parseInt(data);
-		
-		//if port is successfully parsed, pass port to callback then disconnect TCP client
-		(r_port) && (callback) && callback(r_port); client.destroy();
-	});
+};
 
-	//send request code to TCP server
-	client.write(req_code.toString());
-}
 
-//UDP transmission function - passed as callback parameter to negotiation
-const transmit = (r_port) => {
-	const client = udp.createSocket('udp4');
+// server_address = "10.0.2.15";
+// server_port = 9992;
 
-	//create buffer from cli message
-	const buffer = Buffer.from(message);
+// let str = "hello";
 
-	//send message to received port
-	client.send(buffer, r_port, server_address, (err) => {
-		(err) ? client.close()
-			: console.log(`Sent buffer:'${buffer.toString()}' to server:${server_address} at port:${r_port}`);
-	});
+// //create buffer from cli message
+// let buffer = Buffer.alloc(512);
+// buffer.writeInt8(22, 0);
+// buffer.writeInt8(66, 4);
+// buffer.writeInt8(88, 8);
+// buffer.write(str, 12, str.length, "utf-8");
 
-	//event handler for when client receives message
-	client.on('message', (msg, rinfo) => {
-		console.log(`${msg.toString()}\n`);
-	});
-}
-
-//Begin program with negotiation phase
-negotiate(server_address, n_port, req_code, transmit);
+// console.log(buffer);
+// //send message to received port
+// client.send(buffer, server_port, server_address, (err) => {
+// 	(err) ? client.close()
+// 		: console.log(`Sent buffer:'${buffer.toString()}' to server:${server_address} at port:${server_port}`);
+// });
