@@ -1,30 +1,45 @@
 const fs = require('fs');
-const packet = require('./packet');
-const udp = require('dgram');
-const client = udp.createSocket('udp4');
+const Packet = require('./packet');
+const client = require('dgram').createSocket('udp4');
 
 //retrieve cli params
-const emulator_address = process.argv[2];
-const emulator_port = process.argv[3];
-const sender_port = process.argv[4];
-const file_name = process.argv[5];
+const _emuAddress = process.argv[2];
+const _emuPort = process.argv[3];
+const _sndPort = process.argv[4];
+const _fileName = process.argv[5];
 
 //throw error if cli null or empty
-if (!emulator_address || !emulator_port || !sender_port || !file_name) {
+if (!_emuAddress || !_emuPort || !_sndPort || !_fileName) {
 	throw "Missing a required CLI param";
 }
 
+const _windowSize = 10;
 
-const gbn = (file_name) => {
+const fileToPackets = (fileName) => {
 
-	let window_size = 0;
+	let buffer = fs.readFileSync(fileName);
 
-	const read_file = (file_name) => {
+	if (buffer.length <= Packet.maxDataLength) {
+		return [Packet.createPacket(1, buffer.toString("utf-8", 0))];
+	}
 
-	};
+	let packets = []
+	let numPackets = Math.ceil(buffer.length / Packet.maxDataLength);
+	let seqCount = 1;
+	let startIndex = 0;
 
+	while (packets.length !== numPackets) {
+		let nextChunk = (seqCount * Packet.maxDataLength) ;
+		let endIndex = (nextChunk > buffer.length) ? buffer.length : nextChunk;
+		packets.push(Packet.createPacket(seqCount, buffer.toString("utf-8", startIndex, endIndex)));
+		startIndex = endIndex++;
+		seqCount++;
+	}
+
+	return packets;
 };
 
+const _packets = fileToPackets(_fileName);
 
 // server_address = "10.0.2.15";
 // server_port = 9992;

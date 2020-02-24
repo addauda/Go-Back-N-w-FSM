@@ -1,14 +1,17 @@
 // common packet class used by both SENDER and RECEIVER
 
-const maxDataLength = 500;
-const seqNumModulo = 32;
+// const maxDataLength = 500;
+// const seqNumModulo = 32;
 
-class packet {
+class Packet {
+
+	// static maxDataLength = 500;
+	// static seqNumModulo = 32;
 
 	constructor(type, seqNum, strData) {
 
-		if (strData.length > maxDataLength) {
-			throw new Error(`data too large (max is ${maxDataLength} chars)`);
+		if (strData.length > Packet.maxDataLength) {
+			throw new Error(`data too large - you have ${strData.length} | max is ${Packet.maxDataLength} chars`);
 		}
 
 		this.type = type;
@@ -17,15 +20,15 @@ class packet {
 	}
 
 	static createACK(seqNum) {
-		return new packet(0, seqNum, new String());
+		return new Packet(0, seqNum, new String());
 	}
 	
 	static createPacket(seqNum, data) {
-		return new packet(1, seqNum, data);
+		return new Packet(1, seqNum, data);
 	}
 	
 	static createEOT(seqNum) {
-		return new packet(2, seqNum, new String());
+		return new Packet(2, seqNum, new String());
 	}
 
 	get getType() {
@@ -60,6 +63,13 @@ class packet {
 		let strData = buffer.toString("utf-8", 12);
 		return new packet(type, seqNum, strData);
 	}
+
+	toString(){
+		return `${this.type} ${this.seqNum} ${this.strData} ${this.getLength}`;
+	}
 }
 
-module.exports.packet = packet;
+Packet.maxDataLength = 500;
+Packet.seqNumModulo = 32;
+
+module.exports = Packet;
