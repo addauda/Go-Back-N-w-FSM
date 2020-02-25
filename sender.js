@@ -1,7 +1,6 @@
 const fs = require('fs');
 const Packet = require('./packet');
 const client = require('dgram').createSocket('udp4');
-const lodash = require('lodash');
 const machina = require('machina');
 
 //retrieve cli params
@@ -54,7 +53,7 @@ client.on('message', (buffer) => {
 	}
 });
 
-const sendPacketToEmu = (buffer,) => {
+const sendPacketToEmu = (buffer) => {
 	client.send(buffer, _emuPort, _emuAddress, (err) => {
 		(err) ? client.close()
 			: console.log(`Sent buffer ${buffer.byteLength}`);
@@ -83,12 +82,12 @@ const sndViaGBN = new machina.Fsm( {
 				if (this._numPacketsInFlight < this._windowSize) {
 					let packetsToSend = this._windowSize - this._numPacketsInFlight;
 					let sentPackets = 0;
-					while (sentPackets < packetsToSend && this._lastSeqNum < this._packets.length - 1)
+					while (sentPackets < packetsToSend && this._lastSeqNum < this._packets.length)
 					{	
 						sendPacketToEmu(this._packets[this._lastSeqNum].getUDPData());
 						console.log(this._lastSeqNum);
-						this._lastSeqNum++;
-						sentPackets++;
+						this._lastSeqNum += 1;
+						sentPackets += 1;
 						this._ackTimer = setTimeout(function() {
 							this.transition("RESET");
 						}.bind(this), 3000);
@@ -109,8 +108,8 @@ const sndViaGBN = new machina.Fsm( {
 		},
 
 		ACK_RECEIVED: {
-			_onEnter: function() {
-				
+			_onEnter: function(ackSeqNum) {
+				//console.log(ackSeqNum);
 			},
 		}
     },
@@ -124,4 +123,4 @@ const sndViaGBN = new machina.Fsm( {
     }
 } );
 
-sndViaGBN.initFSM();
+sndViaGBN._initFSM();

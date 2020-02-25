@@ -1,9 +1,31 @@
-const packet = require('./packet');
+const fs = require('fs');
+const Packet = require('./packet');
+const client = require('dgram').createSocket('udp4');
 
-// const net = require('net');
-// const dgram = require('dgram');
-// //create server for UDP datagrams
-// const server = dgram.createSocket('udp4');
+//retrieve cli params
+const _emuAddress = process.argv[2];
+const _emuPort = process.argv[3];
+const _rcvPort = process.argv[4];
+const _fileName = process.argv[5];
+
+//throw error if cli null or empty
+if (!_emuAddress || !_emuPort || !_rcvPort || !_fileName) {
+	throw "Missing a required CLI param";
+}
+
+client.on('message', (buffer) => {
+    let packet = Packet.parseUDPdata(buffer);
+    console.log(packet.toString());
+});
+
+client.bind(_rcvPort);
+
+// const sendACKPacketToEmu = (buffer) => {
+// 	client.send(buffer, _emuPort, _emuAddress, (err) => {
+// 		(err) ? client.close()
+// 			: console.log(`Sent buffer ${buffer.byteLength}`);
+// 	});
+// }
 
 // //event handler for server error
 // server.on('error', (err) => {

@@ -27,6 +27,7 @@ class Packet {
 
 	getUDPData() {
 		let buffer = Buffer.alloc(512);
+		buffer.readInt3
 		buffer.writeInt32BE(this.type, 0);
 		buffer.writeInt32BE(this.seqNum, 4);
 		buffer.writeInt32BE(this.strData.length, 8);
@@ -35,15 +36,15 @@ class Packet {
 	}
 
 	static parseUDPdata(buffer) {
-		let type = buffer.readInt32(0);
-		let seqNum = buffer.readInt32(4);
-		let length = buffer.readInt32(8);
+		let type = buffer.readInt32BE(0);
+		let seqNum = buffer.readInt32BE(4);
+		let length = buffer.readInt32BE(8);
 		let strData = buffer.toString("utf-8", 12);
 		return new Packet(type, seqNum, strData);
 	}
 
 	toString(){
-		return `${this.type} ${this.seqNum} ${this.strData} ${this.getLength}`;
+		return `${this.type} ${this.seqNum} ${this.strData} ${this.strData.length}`;
 	}
 }
 
