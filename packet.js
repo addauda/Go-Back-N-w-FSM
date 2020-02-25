@@ -1,12 +1,6 @@
 // common packet class used by both SENDER and RECEIVER
 
-// const maxDataLength = 500;
-// const seqNumModulo = 32;
-
 class Packet {
-
-	// static maxDataLength = 500;
-	// static seqNumModulo = 32;
 
 	constructor(type, seqNum, strData) {
 
@@ -31,37 +25,21 @@ class Packet {
 		return new Packet(2, seqNum, new String());
 	}
 
-	get getType() {
-		return this.type;
-	}
-
-	get getSeqNum() {
-		return this.seqNum;
-	}
-
-	get getLength() {
-		return this.strData.length;
-	}
-
-	get getData() {
-		return [...Buffer.from(this.data)];
-	}
-
 	getUDPData() {
 		let buffer = Buffer.alloc(512);
-		buffer.writeInt8(this.type, 0);
-		buffer.writeInt8(this.seqNum, 4);
-		buffer.writeInt8(this.strData.length, 8);
+		buffer.writeInt32BE(this.type, 0);
+		buffer.writeInt32BE(this.seqNum, 4);
+		buffer.writeInt32BE(this.strData.length, 8);
 		buffer.write(this.strData, 12, this.strData.length, "utf-8");
 		return buffer;
 	}
 
-	parseUDPdata(buffer) {
-		let type = buffer.readInt8(0);
-		let seqNum = buffer.readInt8(4);
-		let length = buffer.readInt8(8);
+	static parseUDPdata(buffer) {
+		let type = buffer.readInt32(0);
+		let seqNum = buffer.readInt32(4);
+		let length = buffer.readInt32(8);
 		let strData = buffer.toString("utf-8", 12);
-		return new packet(type, seqNum, strData);
+		return new Packet(type, seqNum, strData);
 	}
 
 	toString(){

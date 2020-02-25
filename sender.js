@@ -1,6 +1,8 @@
 const fs = require('fs');
 const Packet = require('./packet');
 const client = require('dgram').createSocket('udp4');
+const lodash = require('lodash');
+const machina = require('machina');
 
 //retrieve cli params
 const _emuAddress = process.argv[2];
@@ -12,8 +14,6 @@ const _fileName = process.argv[5];
 if (!_emuAddress || !_emuPort || !_sndPort || !_fileName) {
 	throw "Missing a required CLI param";
 }
-
-const _windowSize = 10;
 
 const fileToPackets = (fileName) => {
 
@@ -29,9 +29,9 @@ const fileToPackets = (fileName) => {
 	let startIndex = 0;
 
 	while (packets.length !== numPackets) {
-		let nextChunk = (seqCount * Packet.maxDataLength) ;
+		let nextChunk = (seqCount * Packet.maxDataLength);
 		let endIndex = (nextChunk > buffer.length) ? buffer.length : nextChunk;
-		packets.push(Packet.createPacket(seqCount, buffer.toString("utf-8", startIndex, endIndex)));
+		packets.push(Packet.createPacket((seqCount - 1), buffer.toString("utf-8", startIndex, endIndex)));
 		startIndex = endIndex++;
 		seqCount++;
 	}
@@ -39,23 +39,89 @@ const fileToPackets = (fileName) => {
 	return packets;
 };
 
-const _packets = fileToPackets(_fileName);
+client.on('message', (buffer) => {
+	let packet = Packet.parseUDPdata(buffer);
 
-// server_address = "10.0.2.15";
-// server_port = 9992;
+	switch (packet.type) {
+		case 0:
+			sndViaGBN._ackReceived(packet.seqNum);
+		case 1:
 
-// let str = "hello";
+		case 2:
 
-// //create buffer from cli message
-// let buffer = Buffer.alloc(512);
-// buffer.writeInt8(22, 0);
-// buffer.writeInt8(66, 4);
-// buffer.writeInt8(88, 8);
-// buffer.write(str, 12, str.length, "utf-8");
+		default:
+			console.log("yo")
+	}
+});
 
-// console.log(buffer);
-// //send message to received port
-// client.send(buffer, server_port, server_address, (err) => {
-// 	(err) ? client.close()
-// 		: console.log(`Sent buffer:'${buffer.toString()}' to server:${server_address} at port:${server_port}`);
-// });
+const sendPacketToEmu = (buffer,) => {
+	client.send(buffer, _emuPort, _emuAddress, (err) => {
+		(err) ? client.close()
+			: console.log(`Sent buffer ${buffer.byteLength}`);
+	});
+}
+
+const sndViaGBN = new machina.Fsm( {
+	namespace: "a2-gbn",
+	_windowSize: 10,
+	_packets: null,
+	_numPacketsInFlight: 0,
+	_lastSeqNum: 0,
+	_lastAckRecv: 0,
+	_ackTimer: null,
+    initialState: "ENQUEUEING",
+    states: {
+        ENQUEUEING: {
+            "ENQUEUE": function() {
+				this._packets = fileToPackets(_fileName);
+                this.transition("TRANSMITTING_PACKETS");
+            }
+		},
+		
+        TRANSMITTING_PACKETS: {
+            _onEnter: function() {
+				if (this._numPacketsInFlight < this._windowSize) {
+					let packetsToSend = this._windowSize - this._numPacketsInFlight;
+					let sentPackets = 0;
+					while (sentPackets < packetsToSend && this._lastSeqNum < this._packets.length - 1)
+					{	
+						sendPacketToEmu(this._packets[this._lastSeqNum].getUDPData());
+						console.log(this._lastSeqNum);
+						this._lastSeqNum++;
+						sentPackets++;
+						this._ackTimer = setTimeout(function() {
+							this.transition("RESET");
+						}.bind(this), 3000);
+					}
+				} else {
+					this.transition("WAITING");
+				}
+			},
+		},
+		
+		RESET: {
+            _onEnter: function() {
+				clearTimeout(this._ackTimer);
+				this._lastSeqNum = this._lastAckRecv;
+				this._numPacketsInFlight = 0;
+				this.transition('TRANSMITTING_PACKETS');
+			},
+		},
+
+		ACK_RECEIVED: {
+			_onEnter: function() {
+				
+			},
+		}
+    },
+
+    _initFSM: function() {
+        this.handle("ENQUEUE");
+	},
+	
+	_ackReceived: function(ackSeqNum) {
+		this.transition("ACK_RECEIVED", ackSeqNum);
+    }
+} );
+
+sndViaGBN.initFSM();
