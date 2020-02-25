@@ -14,7 +14,7 @@ class Packet {
 	}
 
 	static createACK(seqNum) {
-		return new Packet(0, seqNum, new String());
+		return new Packet(0, seqNum, "");
 	}
 	
 	static createPacket(seqNum, data) {
@@ -22,7 +22,7 @@ class Packet {
 	}
 	
 	static createEOT(seqNum) {
-		return new Packet(2, seqNum, new String());
+		return new Packet(2, seqNum, "");
 	}
 
 	getUDPData() {

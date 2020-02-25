@@ -8,6 +8,7 @@ const _emuAddress = process.argv[2];
 const _emuPort = process.argv[3];
 const _sndPort = process.argv[4];
 const _fileName = process.argv[5];
+const _ackTimeout = 100;
 
 //throw error if cli null or empty
 if (!_emuAddress || !_emuPort || !_sndPort || !_fileName) {
@@ -40,23 +41,26 @@ const fileToPackets = (fileName) => {
 
 client.on('message', (buffer) => {
 	let packet = Packet.parseUDPdata(buffer);
-
+	console.log(packet.type);
 	switch (packet.type) {
 		case 0:
 			sndViaGBN._ackReceived(packet.seqNum);
+			break;
 		case 1:
-
+			break;
 		case 2:
-
+			break;
 		default:
-			console.log("yo")
+			console.log(`Unknown Packet Type Received:${packet.type}`)
 	}
 });
+
+client.bind(_sndPort);
 
 const sendPacketToEmu = (buffer) => {
 	client.send(buffer, _emuPort, _emuAddress, (err) => {
 		(err) ? client.close()
-			: console.log(`Sent buffer ${buffer.byteLength}`);
+			: console.log('');
 	});
 }
 
@@ -79,18 +83,18 @@ const sndViaGBN = new machina.Fsm( {
 		
         TRANSMITTING_PACKETS: {
             _onEnter: function() {
-				if (this._numPacketsInFlight < this._windowSize) {
+				if (this._numPacketsInFlight < this._windowSize && this._lastAckRecv < this._packets.length) {
 					let packetsToSend = this._windowSize - this._numPacketsInFlight;
 					let sentPackets = 0;
 					while (sentPackets < packetsToSend && this._lastSeqNum < this._packets.length)
 					{	
 						sendPacketToEmu(this._packets[this._lastSeqNum].getUDPData());
-						console.log(this._lastSeqNum);
+						console.log("SEQNUM",this._lastSeqNum);
 						this._lastSeqNum += 1;
 						sentPackets += 1;
 						this._ackTimer = setTimeout(function() {
 							this.transition("RESET");
-						}.bind(this), 3000);
+						}.bind(this), _ackTimeout);
 					}
 				} else {
 					this.transition("WAITING");
@@ -109,7 +113,19 @@ const sndViaGBN = new machina.Fsm( {
 
 		ACK_RECEIVED: {
 			_onEnter: function(ackSeqNum) {
-				//console.log(ackSeqNum);
+				this._numPacketsInFlight = this._lastSeqNum - ackSeqNum;
+				this._lastAckRecv = ackSeqNum;
+				console.log(`Expected:${this._lastSeqNum} Received;${ackSeqNum}`)
+				if(ackSeqNum < this._lastSeqNum) { //packets are still in flight
+					console.log(`Waiting for ${this._numPacketsInFlight} in flight`)
+					clearTimeout(this._ackTimer);
+					this._ackTimer = setTimeout(function() {
+						this.transition("RESET");
+					}.bind(this), _ackTimeout);
+				} else {
+					clearTimeout(this._ackTimer);
+					console.log("End of transmission")
+				}
 			},
 		}
     },

@@ -13,9 +13,35 @@ if (!_emuAddress || !_emuPort || !_rcvPort || !_fileName) {
 	throw "Missing a required CLI param";
 }
 
+let _nextSeqNum = 0;
+let _lastSeqNum = 0;
+
+const sendACKToEmu = (buffer) => {
+	client.send(buffer, _emuPort, _emuAddress, (err) => {
+		(err) ? client.close()
+			: console.log('');
+	});
+}
+
 client.on('message', (buffer) => {
+
     let packet = Packet.parseUDPdata(buffer);
-    console.log(packet.toString());
+
+    console.log(`Expecting seqNum:${_nextSeqNum} received:${packet.seqNum}`)
+    if(_nextSeqNum === packet.seqNum)
+    {
+        let ackPacket = Packet.createACK(packet.seqNum).getUDPData();
+        sendACKToEmu(ackPacket);
+        console.log(`Sent ACK for ${packet.seqNum}`)
+        _lastSeqNum = _nextSeqNum;
+        _nextSeqNum += 1;
+        console.log(`Next SeqNum:${_nextSeqNum}`)
+    } else {
+        let ackPacket = Packet.createACK(_lastSeqNum).getUDPData();
+        sendACKToEmu(ackPacket);
+        _nextSeqNum = _lastSeqNum;
+        console.log(`Sent ACK for last ${_lastSeqNum}`)
+    }
 });
 
 client.bind(_rcvPort);

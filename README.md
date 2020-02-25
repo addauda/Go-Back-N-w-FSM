@@ -1,4 +1,4 @@
-# CS656_A1
+# Go-Back-N protocol implementation with State Machine
 
 ## How to run program
 - Run server.sh with integer request code as a cli param e.g `./server.sh 18`. You should see negotiation port number in terminal.
