@@ -8,7 +8,7 @@ const _emuAddress = process.argv[2];
 const _emuPort = process.argv[3];
 const _sndPort = process.argv[4];
 const _fileName = process.argv[5];
-const _ackTimeout = 100;
+const _ackTimeout = 4000;
 
 //throw error if cli null or empty
 if (!_emuAddress || !_emuPort || !_sndPort || !_fileName) {
@@ -90,7 +90,10 @@ const sndViaGBN = new machina.Fsm( {
 					{	
 						sendPacketToEmu(this._packets[this._lastSeqNum].getUDPData());
 						console.log("SEQNUM",this._lastSeqNum);
+
+						
 						this._lastSeqNum += 1;
+						
 						sentPackets += 1;
 						this._ackTimer = setTimeout(function() {
 							this.transition("RESET");
