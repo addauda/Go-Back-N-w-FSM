@@ -27,20 +27,29 @@ client.on('message', (buffer) => {
 
     let packet = Packet.parseUDPdata(buffer);
 
-    console.log(`Expecting seqNum:${_nextSeqNum} received:${packet.seqNum}`)
-    if(_nextSeqNum === packet.seqNum)
-    {
-        let ackPacket = Packet.createACK(packet.seqNum).getUDPData();
-        sendACKToEmu(ackPacket);
-        console.log(`Sent ACK for ${packet.seqNum}`)
-        _lastSeqNum = _nextSeqNum;
-        _nextSeqNum += 1;
-        console.log(`Next SeqNum:${_nextSeqNum}`)
-    } else {
-        let ackPacket = Packet.createACK(_lastSeqNum).getUDPData();
-        sendACKToEmu(ackPacket);
-        _nextSeqNum = _lastSeqNum;
-        console.log(`Sent ACK for last ${_lastSeqNum}`)
+    switch(packet.type) {
+        case Packet.type.DATA:
+            if(_nextSeqNum === packet.seqNum)
+            {
+                let ackPacket = Packet.createACK(packet.seqNum).getUDPData();
+                sendACKToEmu(ackPacket);
+                console.log(`Sent ACK for ${packet.seqNum}`)
+                _lastSeqNum = _nextSeqNum;
+                _nextSeqNum += 1;
+                console.log(`Next SeqNum:${_nextSeqNum}`)
+            } else {
+                let ackPacket = Packet.createACK(_lastSeqNum).getUDPData();
+                sendACKToEmu(ackPacket);
+                _nextSeqNum = _lastSeqNum;
+                console.log(`Sent ACK for last ${_lastSeqNum}`)
+            }
+            break;
+        case Packet.type.EOT:
+            let eotPacket = Packet.createEOT(packet.seqNum);
+            sendACKToEmu(eotPacket.getUDPData());
+            client.close()
+            //exit program
+            break;
     }
 });
 

@@ -50,5 +50,6 @@ class Packet {
 
 Packet.maxDataLength = 500;
 Packet.seqNumModulo = 32;
+Packet.type = { ACK: 0, DATA: 1, EOT: 2 }
 
 module.exports = Packet;

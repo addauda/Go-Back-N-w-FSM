@@ -40,19 +40,15 @@ const fileToPackets = (fileName) => {
 };
 
 client.on('message', (buffer) => {
+
+	//create packet from buffer
 	let packet = Packet.parseUDPdata(buffer);
-	console.log(packet.type);
-	switch (packet.type) {
-		case 0:
-			sndViaGBN._ackReceived(packet.seqNum);
-			break;
-		case 1:
-			break;
-		case 2:
-			break;
-		default:
-			console.log(`Unknown Packet Type Received:${packet.type}`)
-	}
+
+	//process only ACK + EOT
+	(packet.type === Packet.type.ACK || packet.type === Packet.type.EOT) &&
+		console.log(packet.type, packet.seqNum)
+		sndViaGBN._ackReceived(packet.type, packet.seqNum);
+	
 });
 
 client.bind(_sndPort);
@@ -71,36 +67,36 @@ const sndViaGBN = new machina.Fsm( {
 	_numPacketsInFlight: 0,
 	_lastSeqNum: 0,
 	_lastAckRecv: 0,
+	_eotSeqNum: 0,
 	_ackTimer: null,
-    initialState: "ENQUEUEING",
+    initialState: "ENQUEUE",
     states: {
-        ENQUEUEING: {
+        ENQUEUE: {
             "ENQUEUE": function() {
 				this._packets = fileToPackets(_fileName);
-                this.transition("TRANSMITTING_PACKETS");
+                this.transition("TRANSMIT_PACKETS");
             }
 		},
 		
-        TRANSMITTING_PACKETS: {
+        TRANSMIT_PACKETS: {
             _onEnter: function() {
-				if (this._numPacketsInFlight < this._windowSize && this._lastAckRecv < this._packets.length) {
-					let packetsToSend = this._windowSize - this._numPacketsInFlight;
-					let sentPackets = 0;
-					while (sentPackets < packetsToSend && this._lastSeqNum < this._packets.length)
-					{	
-						sendPacketToEmu(this._packets[this._lastSeqNum].getUDPData());
-						console.log("SEQNUM",this._lastSeqNum);
 
-						
-						this._lastSeqNum += 1;
-						
-						sentPackets += 1;
-						this._ackTimer = setTimeout(function() {
-							this.transition("RESET");
-						}.bind(this), _ackTimeout);
+				if (this._numPacketsInFlight < this._windowSize && this._lastAckRecv < this._packets.length) 
+				{
+					let packetsToSend = this._windowSize - this._numPacketsInFlight;
+
+					for(let count = 0, seqNum = this._lastSeqNum; count <= packetsToSend && seqNum < this._packets.length; count++, ++seqNum) {
+						let dataPacket = this._packets[seqNum];
+						sendPacketToEmu(dataPacket.getUDPData());
+						this._lastSeqNum = seqNum;
 					}
+
+					this._ackTimer = setTimeout(function() {
+						this.transition("RESET");
+					}.bind(this), _ackTimeout);
+					
 				} else {
-					this.transition("WAITING");
+					this.transition("WAIT");
 				}
 			},
 		},
@@ -110,35 +106,68 @@ const sndViaGBN = new machina.Fsm( {
 				clearTimeout(this._ackTimer);
 				this._lastSeqNum = this._lastAckRecv;
 				this._numPacketsInFlight = 0;
-				this.transition('TRANSMITTING_PACKETS');
+				this.transition('TRANSMIT_PACKETS');
+			},
+		},
+
+		WAIT: {
+            _onEnter: function() {
+				setTimeout(function() {
+					this.transition("TRANSMIT_PACKETS");
+				}.bind(this), _ackTimeout);
 			},
 		},
 
 		ACK_RECEIVED: {
-			_onEnter: function(ackSeqNum) {
-				this._numPacketsInFlight = this._lastSeqNum - ackSeqNum;
-				this._lastAckRecv = ackSeqNum;
-				console.log(`Expected:${this._lastSeqNum} Received;${ackSeqNum}`)
-				if(ackSeqNum < this._lastSeqNum) { //packets are still in flight
-					console.log(`Waiting for ${this._numPacketsInFlight} in flight`)
-					clearTimeout(this._ackTimer);
-					this._ackTimer = setTimeout(function() {
-						this.transition("RESET");
-					}.bind(this), _ackTimeout);
-				} else {
-					clearTimeout(this._ackTimer);
-					console.log("End of transmission")
+			_onEnter: function(ackType, ackSeqNum) {
+
+				switch (ackType) {
+					case Packet.type.ACK:
+						this._numPacketsInFlight = this._lastSeqNum - ackSeqNum;
+						this._lastAckRecv = ackSeqNum;
+						console.log(`Expected:${this._lastSeqNum} Received;${ackSeqNum}`)
+						if(ackSeqNum < this._lastSeqNum) { //packets are still in flight
+							console.log(`Waiting for ${this._numPacketsInFlight} in flight`)
+							clearTimeout(this._ackTimer);
+							this._ackTimer = setTimeout(function() {
+								this.transition("RESET");
+							}.bind(this), _ackTimeout);
+						} else {
+							console.log(1)
+							clearTimeout(this._ackTimer);
+							this.transition("END_TRANSMISSION");
+						}
+						break;
+					case Packet.type.EOT:
+						if (ackSeqNum === this._lastSeqNum) {
+							this.transition('FINISH');
+						}
+						break;
 				}
 			},
-		}
+		},
+
+		END_TRANSMISSION: {
+            _onEnter: function() {
+				let eotPacket = Packet.createEOT(this._lastSeqNum);
+				sendPacketToEmu(eotPacket.getUDPData());
+			},
+		},
+
+		FINISH: {
+            _onEnter: function() {
+				client.close();
+				console.log('The END');
+			},
+		},
     },
 
     _initFSM: function() {
         this.handle("ENQUEUE");
 	},
 	
-	_ackReceived: function(ackSeqNum) {
-		this.transition("ACK_RECEIVED", ackSeqNum);
+	_ackReceived: function(ackType, ackSeqNum) {
+		this.transition("ACK_RECEIVED", ackType, ackSeqNum);
     }
 } );
 
