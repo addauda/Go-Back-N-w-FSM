@@ -1,6 +1,6 @@
-const fs = require('fs');
-const Packet = require('./packet');
-const client = require('dgram').createSocket('udp4');
+const fs = require("fs");
+const Packet = require("./packet");
+const client = require("dgram").createSocket("udp4");
 
 //retrieve cli params
 const _emuAddress = process.argv[2];
@@ -10,73 +10,56 @@ const _fileName = process.argv[5];
 
 //throw error if cli null or empty
 if (!_emuAddress || !_emuPort || !_rcvPort || !_fileName) {
-	throw "Missing a required CLI param";
+  throw "Missing a required CLI param";
 }
 
+//gbn counters
 let _nextSeqNum = 0;
 let _lastSeqNum = 0;
 
-const sendACKToEmu = (buffer) => {
-	client.send(buffer, _emuPort, _emuAddress, (err) => {
-		(err) ? client.close()
-			: console.log('');
-	});
-}
+//send packet to emulator
+const sendPacketToEmu = buffer => {
+  client.send(buffer, _emuPort, _emuAddress, err => {
+    err ? client.close() : console.log("");
+  });
+};
 
-client.on('message', (buffer) => {
+//event handler for any udp data received
+client.on("message", buffer => {
+  //parse buffer -> packet
+  let packet = Packet.parseUDPdata(buffer);
 
-    let packet = Packet.parseUDPdata(buffer);
-
-    switch(packet.type) {
-        case Packet.type.DATA:
-            if(_nextSeqNum === packet.seqNum)
-            {
-                let ackPacket = Packet.createACK(packet.seqNum).getUDPData();
-                sendACKToEmu(ackPacket);
-                console.log(`Sent ACK for ${packet.seqNum}`)
-                _lastSeqNum = _nextSeqNum;
-                _nextSeqNum += 1;
-                console.log(`Next SeqNum:${_nextSeqNum}`)
-            } else {
-                let ackPacket = Packet.createACK(_lastSeqNum).getUDPData();
-                sendACKToEmu(ackPacket);
-                _nextSeqNum = _lastSeqNum;
-                console.log(`Sent ACK for last ${_lastSeqNum}`)
-            }
-            break;
-        case Packet.type.EOT:
-            let eotPacket = Packet.createEOT(packet.seqNum);
-            sendACKToEmu(eotPacket.getUDPData());
-            client.close()
-            //exit program
-            break;
-    }
+  switch (packet.type) {
+    //handle data packets
+    case Packet.type.DATA:
+      //sequence number from packet is what was expected
+      if (_nextSeqNum === packet.seqNum) {
+        //create and send ACK for received packet
+        let ackPacket = Packet.createACK(packet.seqNum);
+        sendPacketToEmu(ackPacket.getUDPData());
+        //update gbn counters
+        _lastSeqNum = _nextSeqNum;
+        _nextSeqNum += 1;
+      }
+      //sequence number from packet is not what was expected
+      else {
+        //create and send ACK for last acknowledged packet
+        let ackPacket = Packet.createACK(_lastSeqNum);
+        sendPacketToEmu(ackPacket.getUDPData());
+        //update gbn counters
+        _nextSeqNum = _lastSeqNum;
+      }
+      break;
+    //handle EOT packets
+    case Packet.type.EOT:
+      //create and send ACK for EOT
+      let eotPacket = Packet.createEOT(packet.seqNum);
+      sendPacketToEmu(eotPacket.getUDPData());
+      //close client
+      client.close();
+      break;
+  }
 });
 
+//start listening at specified
 client.bind(_rcvPort);
-
-// const sendACKPacketToEmu = (buffer) => {
-// 	client.send(buffer, _emuPort, _emuAddress, (err) => {
-// 		(err) ? client.close()
-// 			: console.log(`Sent buffer ${buffer.byteLength}`);
-// 	});
-// }
-
-// //event handler for server error
-// server.on('error', (err) => {
-//     console.log(`server error:\n${err.stack}`);
-//     server.close();
-// });
-
-// //event handler for when server receives message
-// //reverses data and sends back on socket
-// server.on('message', (buffer, rinfo) => {
-//     console.log(buffer.readInt8(0));
-//     console.log(buffer.readInt8(4));
-//     console.log(buffer.readInt8(8));
-//     console.log(buffer.toString("utf-8", 12));
-//     //console.log(`${msg.toString()}`, rinfo.port, rinfo.address);
-// });
-
-// //binds server to any available port and all network interfaces on host
-// server.bind(9994);
