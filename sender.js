@@ -64,9 +64,7 @@ const rcvPacketFromEmu = buffer => {
   //process only ACK + EOT
   if (packet.type === Packet.type.ACK || packet.type === Packet.type.EOT) {
     //log ACK sequence number
-    if (packet.type === Packet.type.ACK) {
-      ackLogger.info(packet.seqNum);
-    }
+    ackLogger.info(packet.seqNum);
     sndViaGBN._ackReceived(packet.type, packet.seqNum);
   }
 };
@@ -87,7 +85,7 @@ const sndPacketToEmu = packet => {
   });
 };
 
-const _ackTimeout = 4000;
+const _ackTimeout = 6000;
 
 //gbn state machine
 const sndViaGBN = new machina.Fsm({
@@ -187,10 +185,11 @@ const sndViaGBN = new machina.Fsm({
             }
             break;
           case Packet.type.EOT:
+            clearTimeout(this._ackTimer);
             //transition to finish
-            //if (ackSeqNum === this._lastSeqNum) {
-            this.transition("FINISH");
-            //}
+            if (this._eotSeqNum && ackSeqNum === this._eotSeqNum) {
+              this.transition("FINISH");
+            }
             break;
         }
       }
@@ -199,7 +198,9 @@ const sndViaGBN = new machina.Fsm({
     //in this state - send EOT packet
     END_TRANSMISSION: {
       _onEnter: function() {
-        let eotPacket = Packet.createEOT(this._lastSeqNum);
+        clearTimeout(this._ackTimer);
+        this._eotSeqNum = (this._lastSeqNum + 1) % 32
+        let eotPacket = Packet.createEOT(this._eotSeqNum);
         sndPacketToEmu(eotPacket);
       }
     },
@@ -221,9 +222,13 @@ const sndViaGBN = new machina.Fsm({
 
   //external interface into state machine
   _ackReceived: function(ackType, ackSeqNum) {
+    console.log("ACK_RECEIVED", ackType, ackSeqNum);
     this.transition("ACK_RECEIVED", ackType, ackSeqNum);
   }
 });
 
 //transition to initial state on FSM
 sndViaGBN._initFSM();
+
+sndViaGBN.on("*", (e, data) => {console.log(`${data.fromState} --> ${data.toState}`)} )
+

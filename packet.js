@@ -39,7 +39,7 @@ class Packet {
     let type = buffer.readInt32BE(0);
     let seqNum = buffer.readInt32BE(4);
     let length = buffer.readInt32BE(8);
-    let strData = buffer.toString("utf-8", 12);
+    let strData = buffer.toString("utf-8", 12, length + 12);
     return new Packet(type, seqNum, strData);
   }
 

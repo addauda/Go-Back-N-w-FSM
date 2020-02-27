@@ -83,7 +83,6 @@ client.on("message", buffer => {
       //create and send ACK for EOT
       let eotPacket = Packet.createEOT(packet.seqNum);
       sndPacketToEmu(eotPacket);
-      client.close(); //close client
       packetsToFile(_fileName); //write packet data to file
       break;
   }
