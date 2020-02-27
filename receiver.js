@@ -36,17 +36,16 @@ const sndPacketToEmu = packet => {
 };
 
 const packetsToFile = fileName => {
-  fs.open(fileName, "w", function(err, fd) {
-    if (err) {
-      throw `error opening file: ${err}`;
-    }
+  //open output file in append mode
+  let writer = fs.createWriteStream(fileName, { flags: "a" });
 
-    packets.forEach(packet => {
-      fs.write(fd, packet.strData);
-    });
-
-    fs.close();
+  //loop through packets and get string content
+  packets.forEach(packet => {
+    writer.write(packet.strData);
   });
+
+  //close write
+  writer.end();
 };
 
 //event handler for any udp data received
