@@ -2,6 +2,15 @@ const fs = require("fs");
 const Packet = require("./packet");
 const client = require("dgram").createSocket("udp4");
 const machina = require("machina");
+const createLogger = require("./logger");
+
+//logger constats
+const ackLogFileName = "ack.log";
+const seqLogFileName = "seqnum.log";
+
+// Create the loggers
+const ackLogger = createLogger(ackLogFileName);
+const seqNumLogger = createLogger(seqLogFileName);
 
 //retrieve cli params
 const _emuAddress = process.argv[2];
@@ -54,15 +63,21 @@ const rcvPacketFromEmu = buffer => {
 
   //process only ACK + EOT
   if (packet.type === Packet.type.ACK || packet.type === Packet.type.EOT) {
-    console.log(packet.type, packet.seqNum);
+    //log ACK sequence number
+    if (packet.type === Packet.type.ACK) {
+      ackLogger.info(packet.seqNum);
+    }
     sndViaGBN._ackReceived(packet.type, packet.seqNum);
   }
 };
 
 //send packets to emu
-const sndPacketToEmu = buffer => {
+const sndPacketToEmu = packet => {
+  let buffer = packet.getUDPData();
+
+  //send buffer and log sequence number
   client.send(buffer, _emuPort, _emuAddress, err => {
-    err ? client.close() : console.log("");
+    err ? client.close() : seqNumLogger.info(packet.seqNum);
   });
 };
 
@@ -104,7 +119,7 @@ const sndViaGBN = new machina.Fsm({
             count++, ++seqNum
           ) {
             let dataPacket = this._packets[seqNum];
-            sndPacketToEmu(dataPacket.getUDPData());
+            sndPacketToEmu(dataPacket);
             this._lastSeqNum = seqNum;
           }
           //start timer after send
@@ -179,7 +194,7 @@ const sndViaGBN = new machina.Fsm({
     END_TRANSMISSION: {
       _onEnter: function() {
         let eotPacket = Packet.createEOT(this._lastSeqNum);
-        sndPacketToEmu(eotPacket.getUDPData());
+        sndPacketToEmu(eotPacket);
       }
     },
 
@@ -206,7 +221,7 @@ const sndViaGBN = new machina.Fsm({
 //set event handler for messages from emulator
 client.on("message", rcvPacketFromEmu);
 
-//listen on specified port
+//start listening on specified port
 client.bind(_sndPort);
 
 //transition to initial state on FSM
