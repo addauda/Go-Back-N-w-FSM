@@ -77,8 +77,6 @@ client.on("message", rcvPacketFromEmu);
 //start listening on specified port
 client.bind(_sndPort);
 
-
-
 //send packets to emu
 const sndPacketToEmu = packet => {
   let buffer = packet.getUDPData();
@@ -190,9 +188,9 @@ const sndViaGBN = new machina.Fsm({
             break;
           case Packet.type.EOT:
             //transition to finish
-            if (ackSeqNum === this._lastSeqNum) {
-              this.transition("FINISH");
-            }
+            //if (ackSeqNum === this._lastSeqNum) {
+            this.transition("FINISH");
+            //}
             break;
         }
       }
@@ -209,6 +207,7 @@ const sndViaGBN = new machina.Fsm({
     //in this state - cleanup client and exit
     FINISH: {
       _onEnter: function() {
+        clearTimeout(this._ackTimer);
         client.close();
         console.log("The END");
       }
