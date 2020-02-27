@@ -1,6 +1,7 @@
 package-lock.json
 .vscode/
 port.txt
+output.*
 
 # Logs
 logs

@@ -71,6 +71,14 @@ const rcvPacketFromEmu = buffer => {
   }
 };
 
+//set event handler for messages from emulator
+client.on("message", rcvPacketFromEmu);
+
+//start listening on specified port
+client.bind(_sndPort);
+
+
+
 //send packets to emu
 const sndPacketToEmu = packet => {
   let buffer = packet.getUDPData();
@@ -217,12 +225,6 @@ const sndViaGBN = new machina.Fsm({
     this.transition("ACK_RECEIVED", ackType, ackSeqNum);
   }
 });
-
-//set event handler for messages from emulator
-client.on("message", rcvPacketFromEmu);
-
-//start listening on specified port
-client.bind(_sndPort);
 
 //transition to initial state on FSM
 sndViaGBN._initFSM();
