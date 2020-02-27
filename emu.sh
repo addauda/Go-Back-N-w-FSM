@@ -1,2 +1,2 @@
 IP=10.0.2.15
-./nEmulator-linux386 9992 $IP 9994 9993 $IP 9991 1 0.2 1
+./nEmulator-linux386 9982 $IP 9984 9983 $IP 9981 1 0.2 1
