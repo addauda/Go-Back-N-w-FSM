@@ -4,7 +4,7 @@
 - Instal dependencies with `npm install`
 - Modify ports and host IP variables in **client**, **sender** and **emu** shell scripts
 - Run shell scripts in the following order: `emu.sh` --> `receiver.sh` --> `sender.sh`
-- You should see your relevant log files generated and log lines in the cli that echo the state of FSM
+- You should see the relevant log files generated and FSM state output in the cli
 
 ## Tested Environments
 -  Tested on `ubuntu1804-008` as both client and server: PASSED
