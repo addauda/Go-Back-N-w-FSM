@@ -1,2 +1,5 @@
-IP=10.0.2.15
-node sender.js $IP 9991 9992 input.js
+EMU_IP=10.0.2.15
+INPUT_FILE=output.txt
+EMU_DATA_PORT=9991
+SNDR_PORT=9992
+node sender.js $EMU_IP $EMU_DATA_PORT $SNDR_PORT $INPUT_FILE
