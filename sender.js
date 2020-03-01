@@ -85,8 +85,6 @@ const sndPacketToEmu = packet => {
   });
 };
 
-const _ackTimeout = 10000;
-
 //gbn state machine
 const sndViaGBN = new machina.Fsm({
   namespace: "a2-gbn",
@@ -97,6 +95,7 @@ const sndViaGBN = new machina.Fsm({
   _lastAckRecv: 0,
   _eotSeqNum: 0,
   _ackTimer: null,
+  _ackTimeout: 10000,
   initialState: "ENQUEUE",
   states: {
     //in this state - get packets ready for transmission i.e chunking
@@ -137,7 +136,7 @@ const sndViaGBN = new machina.Fsm({
               this.transition("RESET");
               this.handle("CLEAR_COUNTERS");
             }.bind(this),
-            _ackTimeout
+            this._ackTimeout
           );
         } else {
           console.log("GOT TO WAIT");
@@ -167,7 +166,7 @@ const sndViaGBN = new machina.Fsm({
             this.transition("TRANSMIT");
             this.handle("SEND_PACKETS");
           }.bind(this),
-          _ackTimeout
+          this._ackTimeout
         );
       }
     },
@@ -191,7 +190,7 @@ const sndViaGBN = new machina.Fsm({
                   this.transition("RESET");
                   this.handle("CLEAR_COUNTERS");
                 }.bind(this),
-                _ackTimeout
+                this._ackTimeout
               );
             } else {
               //no outstanding packets left to be ack'ed
