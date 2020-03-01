@@ -1,9 +1,10 @@
 # Go-Back-N protocol implementation with State Machine
 
 ## How to run program
-- Run server.sh with integer request code as a cli param e.g `./server.sh 18`. You should see negotiation port number in terminal.
-- Run client.sh with server address, negotiation port number, integer request code, and a message as a cli params e.g `./client.sh 192.168.1.6 49547 18 "Hello Bob"`
-- You should see your message reversed one the last line of output
+
+- Modify ports and host IP variables in **client**, **sender** and **emu** shell scripts
+- Run shell scripts in the following order: `emu.sh` --> `receiver.sh` --> `sender.sh`
+- You should see your relevant log files generated and log lines in the cli that echo the state of FSM
 
 ## Tested Environments
 -  Tested on `ubuntu1804-008` as both client and server: PASSED
