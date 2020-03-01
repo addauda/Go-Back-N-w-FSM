@@ -88,6 +88,7 @@ const sndPacketToEmu = packet => {
 //gbn state machine
 const sndViaGBN = new machina.Fsm({
   namespace: "a2-gbn",
+  //GBN constants
   _windowSize: 10,
   _packets: null,
   _numPacketsInFlight: 0,
