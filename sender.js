@@ -105,7 +105,7 @@ const sndViaGBN = new machina.Fsm({
         console.log("IN --> GENERATE_PACKETS");
         this._packets = fileToPackets(_fileName);
         this.transition("TRANSMIT");
-        this.handle("SEND_PACKETS")
+        this.handle("SEND_PACKETS");
       }
     },
     //in this state - transmit packets based on window size constraints and sequence numbers
@@ -127,7 +127,7 @@ const sndViaGBN = new machina.Fsm({
           ) {
             let dataPacket = this._packets[seqNum];
             sndPacketToEmu(dataPacket);
-            this._lastSeqNum = seqNum;
+            this._lastSeqNum = seqNum % Packet.seqNumModulo;
           }
           console.log("STARTED TIMER");
           //start timer after send
@@ -216,7 +216,7 @@ const sndViaGBN = new machina.Fsm({
       SEND_EOT: function() {
         console.log("IN --> SENDING EOT");
         clearTimeout(this._ackTimer);
-        this._eotSeqNum = (this._lastSeqNum + 1) % 32
+        this._eotSeqNum = (this._lastSeqNum + 1) % Packet.seqNumModulo;
         let eotPacket = Packet.createEOT(this._eotSeqNum);
         sndPacketToEmu(eotPacket);
       }
@@ -240,11 +240,10 @@ const sndViaGBN = new machina.Fsm({
 
   //external interface into state machine
   _ackReceived: function(ackType, ackSeqNum) {
-    this.transition("ACK_RECEIVED")
+    this.transition("ACK_RECEIVED");
     this.handle("PROCESS_ACK", ackType, ackSeqNum);
   }
 });
 
 //transition to initial state on FSM
 sndViaGBN._initFSM();
-
