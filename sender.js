@@ -85,7 +85,7 @@ const sndPacketToEmu = packet => {
   });
 };
 
-const _ackTimeout = 6000;
+const _ackTimeout = 10000;
 
 //gbn state machine
 const sndViaGBN = new machina.Fsm({
@@ -101,14 +101,17 @@ const sndViaGBN = new machina.Fsm({
   states: {
     //in this state - get packets ready for transmission i.e chunking
     ENQUEUE: {
-      _onEnter: function() {
+      GENERATE_PACKETS: function() {
+        console.log("IN --> GENERATE_PACKETS");
         this._packets = fileToPackets(_fileName);
-        this.transition("TRANSMIT_PACKETS");
+        this.transition("TRANSMIT");
+        this.handle("SEND_PACKETS")
       }
     },
     //in this state - transmit packets based on window size constraints and sequence numbers
-    TRANSMIT_PACKETS: {
-      _onEnter: function() {
+    TRANSMIT: {
+      SEND_PACKETS: function() {
+        console.log("IN --> SEND_PACKETS");
         // if window is not full
         if (
           this._numPacketsInFlight < this._windowSize &&
@@ -126,34 +129,43 @@ const sndViaGBN = new machina.Fsm({
             sndPacketToEmu(dataPacket);
             this._lastSeqNum = seqNum;
           }
+          console.log("STARTED TIMER");
           //start timer after send
           this._ackTimer = setTimeout(
             function() {
+              console.log("TIMER EXPIRED");
               this.transition("RESET");
+              this.handle("CLEAR_COUNTERS");
             }.bind(this),
             _ackTimeout
           );
         } else {
+          console.log("GOT TO WAIT");
           this.transition("WAIT");
         }
       }
     },
     //in this state - reset gbn counters, timers, and transition to transmit state
     RESET: {
-      _onEnter: function() {
+      CLEAR_COUNTERS: function() {
+        console.log("IN --> CLEAR COUNTERS");
         clearTimeout(this._ackTimer);
         this._lastSeqNum = this._lastAckRecv;
         this._numPacketsInFlight = 0;
-        this.transition("TRANSMIT_PACKETS");
+        this.transition("TRANSMIT");
+        this.handle("SEND_PACKETS");
       }
     },
 
     //in this state - wait for a specified time then transition to transmit state
     WAIT: {
-      _onEnter: function() {
+      SLEEP: function() {
+        console.log("IN --> SLEEP");
         setTimeout(
           function() {
-            this.transition("TRANSMIT_PACKETS");
+            console.log("SLEEP TIMER EXPIRED");
+            this.transition("TRANSMIT");
+            this.handle("SEND_PACKETS");
           }.bind(this),
           _ackTimeout
         );
@@ -162,7 +174,8 @@ const sndViaGBN = new machina.Fsm({
 
     //in this state - process acks we've received
     ACK_RECEIVED: {
-      _onEnter: function(ackType, ackSeqNum) {
+      PROCESS_ACK: function(ackType, ackSeqNum) {
+        console.log("IN --> PROCESS ACK", ackType, " ", ackSeqNum);
         switch (ackType) {
           case Packet.type.ACK:
             this._numPacketsInFlight = this._lastSeqNum - ackSeqNum;
@@ -174,7 +187,9 @@ const sndViaGBN = new machina.Fsm({
               clearTimeout(this._ackTimer);
               this._ackTimer = setTimeout(
                 function() {
+                  console.log("ACK TIMER EXPIRED");
                   this.transition("RESET");
+                  this.handle("CLEAR_COUNTERS");
                 }.bind(this),
                 _ackTimeout
               );
@@ -182,6 +197,7 @@ const sndViaGBN = new machina.Fsm({
               //no outstanding packets left to be ack'ed
               clearTimeout(this._ackTimer);
               this.transition("END_TRANSMISSION");
+              this.handle("SEND_EOT");
             }
             break;
           case Packet.type.EOT:
@@ -197,7 +213,8 @@ const sndViaGBN = new machina.Fsm({
 
     //in this state - send EOT packet
     END_TRANSMISSION: {
-      _onEnter: function() {
+      SEND_EOT: function() {
+        console.log("IN --> SENDING EOT");
         clearTimeout(this._ackTimer);
         this._eotSeqNum = (this._lastSeqNum + 1) % 32
         let eotPacket = Packet.createEOT(this._eotSeqNum);
@@ -208,27 +225,26 @@ const sndViaGBN = new machina.Fsm({
     //in this state - cleanup client and exit
     FINISH: {
       _onEnter: function() {
+        console.log("IN --> FINISH");
         clearTimeout(this._ackTimer);
         client.close();
-        console.log("The END");
+        console.log("END OF TRANSMISSION");
       }
     }
   },
 
   //external interface into state machine
   _initFSM: function() {
-    this.transition("ENQUEUE");
+    this.handle("GENERATE_PACKETS");
   },
 
   //external interface into state machine
   _ackReceived: function(ackType, ackSeqNum) {
-    console.log("ACK_RECEIVED", ackType, ackSeqNum);
-    this.transition("ACK_RECEIVED", ackType, ackSeqNum);
+    this.transition("ACK_RECEIVED")
+    this.handle("PROCESS_ACK", ackType, ackSeqNum);
   }
 });
 
 //transition to initial state on FSM
 sndViaGBN._initFSM();
-
-sndViaGBN.on("*", (e, data) => {console.log(`${data.fromState} --> ${data.toState}`)} )
 
