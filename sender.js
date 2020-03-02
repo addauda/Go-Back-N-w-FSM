@@ -90,13 +90,14 @@ const sndViaGBN = new machina.Fsm({
   namespace: "a2-gbn",
   //GBN constants
   _windowSize: 10,
+  _ackTimeout: 10000,
+  //GBN counters
   _packets: null,
   _numPacketsInFlight: 0,
   _lastSeqNum: 0,
   _lastAckRecv: 0,
   _eotSeqNum: 0,
   _ackTimer: null,
-  _ackTimeout: 10000,
   initialState: "ENQUEUE",
   states: {
     //in this state - get packets ready for transmission i.e chunking
