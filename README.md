@@ -7,5 +7,5 @@
 - You should see the relevant log files generated and FSM state output in the cli
 
 ## Tested Environments
--  Tested on `ubuntu1804-008` as both client and server: PASSED
+-  Tested on `ubuntu1804-008` as both sender, emulator and receiver: PASSED
 -  Tested on `ubuntu1804-004` as client and `ubuntu1804-008` as server: PASSED
