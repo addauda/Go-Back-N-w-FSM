@@ -90,7 +90,7 @@ const sndViaGBN = new machina.Fsm({
   namespace: "a2-gbn",
   //GBN constants
   _windowSize: 10,
-  _ackTimeout: 10000,
+  _ackTimeout: 300,
   //GBN counters
   _packets: null,
   _numPacketsInFlight: 0,
