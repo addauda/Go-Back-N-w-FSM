@@ -27,7 +27,6 @@ class Packet {
 
   getUDPData() {
     let buffer = Buffer.alloc(512);
-    buffer.readInt3;
     buffer.writeInt32BE(this.type, 0);
     buffer.writeInt32BE(this.seqNum, 4);
     buffer.writeInt32BE(this.strData.length, 8);
