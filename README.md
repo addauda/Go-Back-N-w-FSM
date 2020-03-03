@@ -5,7 +5,8 @@
 - Modify ports and host IP variables in **client**, **sender** and **emu** shell scripts
 - Run shell scripts in the following order: `emu.sh` --> `receiver.sh` --> `sender.sh`
 - You should see the relevant log files generated and FSM state output in the cli
+- Ack timeout for sender can be set on the State machine GBN constants (Line in `93` sender.js) - Default is 300ms
 
 ## Tested Environments
 -  Tested on `ubuntu1804-008` as both sender, emulator and receiver: PASSED
--  Tested on `ubuntu1804-004` as client and `ubuntu1804-008` as server: PASSED
+-  Tested on `ubuntu1804-002` as sender, `ubuntu1804-004` as emulator, and `ubuntu1804-008` as receiver: PASSED
