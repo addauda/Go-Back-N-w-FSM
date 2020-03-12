@@ -9,7 +9,7 @@
 
   If no parameters are specified, then default variables are used.
 - You should see the relevant log files generated and FSM state output in the cli
-- Ack timeout for sender can be set on the State machine GBN constants (Line in `93` sender.js) - Default is 300ms
+- Ack timeout for sender can be set on the State machine GBN constants (Line in `95` sender.js) - Default is 300ms
 
 ## Tested Environments
 -  Tested on `ubuntu1804-008` as both sender, emulator and receiver: PASSED

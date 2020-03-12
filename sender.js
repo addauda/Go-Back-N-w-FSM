@@ -23,7 +23,7 @@ if (!_emuAddress || !_emuPort || !_sndPort || !_fileName) {
   throw "Missing a required CLI param";
 }
 
-console.log(_emuAddress, _emuPort, _sndPort, _fileName)
+console.log(_emuAddress, _emuPort, _sndPort, _fileName);
 
 //chunks files into N packets
 const fileToPackets = fileName => {
