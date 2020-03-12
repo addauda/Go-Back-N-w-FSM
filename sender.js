@@ -23,6 +23,8 @@ if (!_emuAddress || !_emuPort || !_sndPort || !_fileName) {
   throw "Missing a required CLI param";
 }
 
+console.log(_emuAddress, _emuPort, _sndPort, _fileName)
+
 //chunks files into N packets
 const fileToPackets = fileName => {
   // create buffer from file contents
@@ -122,7 +124,7 @@ const sndViaGBN = new machina.Fsm({
 
           //send packets starting from last sequence number ack'ed
           for (
-            let count = 0, seqNum = this._lastSeqNum;
+            let count = 1, seqNum = this._lastSeqNum;
             count <= packetsToSend && seqNum < this._packets.length;
             count++, ++seqNum
           ) {
@@ -194,7 +196,7 @@ const sndViaGBN = new machina.Fsm({
                 }.bind(this),
                 this._ackTimeout
               );
-            } else {
+            } else if (ackSeqNum === this._packets.length - 1) {
               //no outstanding packets left to be ack'ed
               clearTimeout(this._ackTimer);
               this.transition("END_TRANSMISSION");

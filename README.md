@@ -1,11 +1,13 @@
 # Go-Back-N protocol implementation with State Machine
 
 ## How to run program
-- Instal dependencies with `npm install`
-- Modify ports and host IP variables in **client**, **sender** and **emu** shell scripts
-- Run shell scripts in the following order: `emu.sh` --> `receiver.sh` --> `sender.sh`
-- If you'd like to run the sender and receiver without shell scripts, you can pass the required cli parameters directly when you're running the files with node.
-  e.g `node sender.js <command line arguments>`
+- Install dependencies with `npm install`
+- Run shell scripts in the following order:
+  - `emu.sh <command line arguments>` 
+  - `receiver.sh <command line arguments>`
+  - `sender.sh <command line arguments>`
+
+  If no parameters are specified, then default variables are used.
 - You should see the relevant log files generated and FSM state output in the cli
 - Ack timeout for sender can be set on the State machine GBN constants (Line in `93` sender.js) - Default is 300ms
 
